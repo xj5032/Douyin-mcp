@@ -13,8 +13,10 @@ FROM python:3.11-slim
 LABEL maintainer="Lozzi"
 LABEL description="Douyin MCP Server — browser automation for Douyin messages"
 
-# 中国 PyPI 镜像
+# 使用中国镜像加速
 ENV PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+ENV PIP_DEFAULT_TIMEOUT=120
+ENV PIP_RETRIES=5
 
 # 安装 Playwright 系统依赖（仅 Chromium 需要的最小依赖集）
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -2,21 +2,23 @@
 Douyin MCP Server — 将抖音私信/聊天功能暴露为 MCP 工具
 
 使用方式:
-    python -m douyin_mcp.server
-    # 或通过 MCP host:
-    #   mcp run douyin_mcp/server.py --port 6789
+    python -m douyin_mcp.server                      # stdio 模式 (默认)
+    python -m douyin_mcp.server --transport sse --port 6789  # SSE 模式 (Docker)
 
 暴露的 MCP 工具:
-    1. search_user(keyword)        — 搜索抖音用户
-    2. list_conversations()        — 列举私信会话列表
+    1. search_user(keyword)          — 搜索抖音用户
+    2. list_conversations()          — 列举私信会话列表
     3. read_messages(contact, limit) — 读取与联系人的私信
-    4. send_message(user_id, text) — 向用户发送私信
+    4. send_message(user_id, text)   — 向用户发送私信
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
+import json
 import logging
+import os
 import sys
 from typing import Optional
 
@@ -94,7 +96,8 @@ _ctrl: Optional[DouyinController] = None
 def _get_ctrl() -> DouyinController:
     global _ctrl
     if _ctrl is None:
-        _ctrl = DouyinController(headless=False)
+        headless = os.environ.get("DOUYIN_HEADLESS", "").lower() in ("true", "1", "yes")
+        _ctrl = DouyinController(headless=headless)
     return _ctrl
 
 
@@ -200,11 +203,70 @@ def send_message(user_id: str, text: str) -> str:
 
 
 def main():
-    """运行 MCP server（默认使用 stdio 传输）。"""
+    """运行 MCP server。
+
+    支持两种传输模式:
+      - stdio (默认): 标准输入输出传输，适合 MCP host 本地调用
+      - sse: Server-Sent Events，HTTP 模式运行在指定端口，适合 Docker
+    """
+    parser = argparse.ArgumentParser(description="Douyin MCP Server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse"],
+        default=os.environ.get("DOUYIN_TRANSPORT", "stdio"),
+        help="传输协议 (默认: stdio, Docker 推荐: sse)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("DOUYIN_PORT", "6789")),
+        help="SSE 模式监听端口 (默认: 6789)",
+    )
+    args = parser.parse_args()
+
     logger.info("启动抖音 MCP 服务器...")
     logger.info("暴露的工具: search_user, list_conversations, read_messages, send_message")
+    logger.info("传输模式: %s", args.transport)
+    if args.transport == "sse":
+        logger.info("监听端口: %d", args.port)
+        logger.info("MCP 端点: http://localhost:%d/mcp", args.port)
+        logger.info("健康检查: http://localhost:%d/health", args.port)
     logger.info("首次启动需要扫码登录，请确保手机抖音 App 可用。")
-    mcp.run()
+
+    if args.transport == "sse":
+        from mcp.server.sse import SseServerTransport
+        from starlette.applications import Starlette
+        from starlette.routing import Mount, Route
+
+        async def health_endpoint(request):
+            from starlette.responses import JSONResponse
+            return JSONResponse({
+                "status": "ok",
+                "service": "douyin-mcp",
+                "version": "0.1.0",
+            })
+
+        sse = SseServerTransport("/mcp")
+
+        async def handle_sse(request):
+            async with sse.connect_sse(
+                request.scope, request.receive, request._send
+            ) as streams:
+                await mcp.run(streams[0], streams[1], mcp.create_initialization_options())
+
+        app = Starlette(
+            routes=[
+                Route("/health", endpoint=health_endpoint),
+                Mount("/mcp", app=sse.handle_post_message),
+                Route("/sse", endpoint=handle_sse),
+            ],
+        )
+
+        import uvicorn
+        logger.info("启动 SSE 服务器 http://0.0.0.0:%d ...", args.port)
+        uvicorn.run(app, host="0.0.0.0", port=args.port, log_level="info")
+    else:
+        mcp.run()
 
 
 if __name__ == "__main__":

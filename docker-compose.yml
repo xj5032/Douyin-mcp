@@ -1,0 +1,56 @@
+# =============================================================================
+# Douyin MCP Server — Docker Compose
+# =============================================================================
+# 快速启动:
+#   docker compose build
+#   docker compose up -d
+#
+# 首次运行需要扫码登录:
+#   1. docker compose logs -f  # 等待二维码截图出来
+#   2. 打开 data/login_qrcode.png 用手机抖音 App 扫码
+#   3. 扫码后容器自动保存登录态到 data/storage.json
+#
+# 连接 MCP Host:
+#   mcp-client 通过 http://localhost:6789/mcp 连接 (SSE 模式)
+#   或通过 docker exec -it douyin-mcp 使用 stdio
+# =============================================================================
+
+services:
+  douyin-mcp:
+    build: .
+    container_name: douyin-mcp
+    ports:
+      - "6789:6789"
+    volumes:
+      # 持久化登录态 (storage.json + cookies)
+      - ./data:/root/.douyin_mcp
+      # 日志输出
+      - ./logs:/var/log/douyin-mcp
+    environment:
+      - TZ=Asia/Shanghai
+      # Docker 容器内强制 headless 模式
+      - DOUYIN_HEADLESS=true
+      # SSE 传输模式 (MCP HTTP 协议)
+      - DOUYIN_TRANSPORT=sse
+      - DOUYIN_PORT=6789
+    restart: unless-stopped
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:6789/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  # 命名 volume (可选的持久化方式)
+  # 默认使用 bind mount ./data 更方便
+  douyin-mcp-data:
+    driver: local

@@ -57,28 +57,84 @@ playwright install chromium
 ### 启动
 
 ```bash
-# 方式一：直接运行
+# 方式一：直接运行（stdio 模式，适合本地 MCP Host）
 python -m douyin_mcp.server
 
-# 方式二：通过 mcp CLI
-mcp run douyin_mcp/server.py --port 6789
+# 方式二：SSE 模式（HTTP 端口，适合远程调用）
+python -m douyin_mcp.server --transport sse --port 6789
 
-# 方式三：配置到 Claude Desktop
-# 在 claude_desktop_config.json 中添加：
+# 方式三：通过 mcp CLI
+mcp run douyin_mcp/server.py --port 6789
 ```
 
-### 配置 Claude Desktop
+---
 
-```json
-{
-  "mcp_servers": {
-    "douyin-mcp": {
-      "command": "python",
-      "args": ["-m", "douyin_mcp.server"],
-      "env": {}
-    }
-  }
-}
+## Docker 部署
+
+### 首次部署
+
+```bash
+# 1. 构建镜像
+docker compose build
+
+# 2. 启动
+docker compose up -d
+
+# 3. 查看日志（等待二维码出现）
+docker compose logs -f
+
+# 4. 用手机抖音 App 扫码
+#    二维码保存在 ./data/login_qrcode.png
+open ./data/login_qrcode.png
+```
+
+### 连接 MCP Host
+
+```bash
+# 容器运行在 SSE 模式
+# MCP Host 通过 SSE 端点连接:
+#   http://localhost:6789/sse   (SSE 事件流)
+#   http://localhost:6789/mcp   (MCP 消息端点)
+#   http://localhost:6789/health (健康检查)
+
+# 测试健康状态
+curl http://localhost:6789/health
+```
+
+### Docker Compose 配置
+
+```yaml
+services:
+  douyin-mcp:
+    build: .
+    container_name: douyin-mcp
+    ports:
+      - "6789:6789"
+    volumes:
+      - ./data:/root/.douyin_mcp        # 持久化登录态
+      - ./logs:/var/log/douyin-mcp      # 日志
+    environment:
+      - TZ=Asia/Shanghai
+      - DOUYIN_HEADLESS=true            # Docker 强制 headless
+      - DOUYIN_TRANSPORT=sse            # SSE 传输模式
+      - DOUYIN_PORT=6789                # 监听端口
+    restart: unless-stopped
+```
+
+### 管理命令
+
+```bash
+# 查看日志
+docker compose logs -f
+
+# 重启
+docker compose restart
+
+# 停止
+docker compose down
+
+# 重新构建（代码更新后）
+docker compose build --no-cache && docker compose up -d
 ```
 
 ## 使用指南

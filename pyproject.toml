@@ -14,6 +14,10 @@ dependencies = [
     "httpx>=0.25.0",
     "opencv-python-headless>=4.8.0",
     "numpy>=1.24.0",
+    # Docker SSE 模式
+    "uvicorn>=0.22.0",
+    "starlette>=0.27.0",
+    "sse-starlette>=1.6.0",
 ]
 
 [project.urls]

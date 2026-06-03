@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -136,6 +137,8 @@ class BrowserManager:
             "--disable-web-security",
             "--disable-features=BlockInsecurePrivateNetworkRequests",
             "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-gpu",
         ]
 
         if self._headless:
@@ -143,67 +146,92 @@ class BrowserManager:
 
         # ── 使用系统已安装的 Google Chrome ────────────────────────────
         # 优先通过 channel="chrome" 调用系统 Chrome，避免从网络下载 Chromium
+        
+        # 如果设置了 PLAYWRIGHT_CHROMIUM_PATH 环境变量，优先使用
+        chromium_path = os.environ.get("PLAYWRIGHT_CHROMIUM_PATH", "")
         user_data_dir = tempfile.mkdtemp(prefix="douyin_mcp_")
 
-        try:
-            self._context = await self._playwright.chromium.launch_persistent_context(
-                user_data_dir=user_data_dir,
-                channel="chrome",
-                headless=False,
-                args=launch_args,
-                viewport={"width": 1280, "height": 720},
-                user_agent=(
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/125.0.0.0 Safari/537.36"
-                ),
-                locale="zh-CN",
-                timezone_id="Asia/Shanghai",
-            )
-            logger.info("通过 channel='chrome' 成功启动系统 Google Chrome")
-        except Exception as exc:
-            logger.warning(
-                "channel='chrome' 启动失败，尝试 executable_path 回退: %s", exc
-            )
-            for fallback_path in [
-                    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-                    None,  # Playwright bundled Chromium
-                ]:
-                try:
-                    kwargs = dict(
-                        user_data_dir=user_data_dir,
-                        headless=self._headless,
-                        args=launch_args,
-                        viewport={"width": 1280, "height": 720},
-                        locale="zh-CN",
-                        timezone_id="Asia/Shanghai",
-                    )
-                    if fallback_path:
-                        kwargs["executable_path"] = fallback_path
-                        ua = (
-                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                            "AppleWebKit/537.36 (KHTML, like Gecko) "
-                            "Chrome/125.0.0.0 Safari/537.36"
+        if chromium_path:
+            try:
+                self._context = await self._playwright.chromium.launch_persistent_context(
+                    user_data_dir=user_data_dir,
+                    executable_path=chromium_path,
+                    headless=self._headless,
+                    args=launch_args,
+                    viewport={"width": 1280, "height": 720},
+                    user_agent=(
+                        "Mozilla/5.0 (X11; Linux x86_64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/120.0.0.0 Safari/537.36"
+                    ),
+                    locale="zh-CN",
+                    timezone_id="Asia/Shanghai",
+                )
+                logger.info("通过 PLAYWRIGHT_CHROMIUM_PATH=%s 启动 Chromium", chromium_path)
+            except Exception as exc:
+                logger.warning("PLAYWRIGHT_CHROMIUM_PATH 启动失败: %s", exc)
+                chromium_path = ""  # 清空，走后续回退
+
+        if not chromium_path:
+            try:
+                self._context = await self._playwright.chromium.launch_persistent_context(
+                    user_data_dir=user_data_dir,
+                    channel="chrome",
+                    headless=False,
+                    args=launch_args,
+                    viewport={"width": 1280, "height": 720},
+                    user_agent=(
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/125.0.0.0 Safari/537.36"
+                    ),
+                    locale="zh-CN",
+                    timezone_id="Asia/Shanghai",
+                )
+                logger.info("通过 channel='chrome' 成功启动系统 Google Chrome")
+            except Exception as exc:
+                logger.warning(
+                    "channel='chrome' 启动失败，尝试 executable_path 回退: %s", exc
+                )
+                for fallback_path in [
+                        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                        None,  # Playwright bundled Chromium
+                    ]:
+                    try:
+                        kwargs = dict(
+                            user_data_dir=user_data_dir,
+                            headless=self._headless,
+                            args=launch_args,
+                            viewport={"width": 1280, "height": 720},
+                            locale="zh-CN",
+                            timezone_id="Asia/Shanghai",
                         )
-                    else:
-                        # Docker 容器内 Playwright 自带 Chromium
-                        ua = (
-                            "Mozilla/5.0 (X11; Linux x86_64) "
-                            "AppleWebKit/537.36 (KHTML, like Gecko) "
-                            "Chrome/120.0.0.0 Safari/537.36"
+                        if fallback_path:
+                            kwargs["executable_path"] = fallback_path
+                            ua = (
+                                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                                "Chrome/125.0.0.0 Safari/537.36"
+                            )
+                        else:
+                            # Docker 容器内 Playwright 自带 Chromium
+                            ua = (
+                                "Mozilla/5.0 (X11; Linux x86_64) "
+                                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                                "Chrome/120.0.0.0 Safari/537.36"
+                            )
+                            kwargs["headless"] = True
+                            kwargs["no_viewport"] = False
+                        kwargs["user_agent"] = ua
+                        self._context = await self._playwright.chromium.launch_persistent_context(
+                            **kwargs
                         )
-                        kwargs["headless"] = True
-                        kwargs["no_viewport"] = False
-                    kwargs["user_agent"] = ua
-                    self._context = await self._playwright.chromium.launch_persistent_context(
-                        **kwargs
-                    )
-                    label = fallback_path if fallback_path else "Playwright bundled Chromium (Docker)"
-                    logger.info("通过 %s 成功启动浏览器", label)
-                    break
-                except Exception as exc2:
-                    logger.warning("回退路径 %s 失败: %s", fallback_path or "bundled Chromium", exc2)
-                    continue
+                        label = fallback_path if fallback_path else "Playwright bundled Chromium (Docker)"
+                        logger.info("通过 %s 成功启动浏览器", label)
+                        break
+                    except Exception as exc2:
+                        logger.warning("回退路径 %s 失败: %s", fallback_path or "bundled Chromium", exc2)
+                        continue
             else:
                 raise RuntimeError("所有浏览器启动方式均失败")
 

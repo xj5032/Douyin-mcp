@@ -7,4 +7,4 @@ dist
 .git
 .gitignore
 .DS_Store
-*.md
+TECHNICAL_REPORT.md

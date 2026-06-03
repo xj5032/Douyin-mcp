@@ -1,12 +1,22 @@
 [project]
 name = "douyin-mcp-server"
 version = "0.1.0"
-description = "MCP Server for Douyin — let AI read and send Douyin direct messages via browser automation"
+description = "MCP Server for Douyin — let AI search users, read and send Douyin direct messages via browser automation"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "AGPL-3.0-only"}
 authors = [
     {name = "Lozzi", email = "jp7454yv4f-sudo@users.noreply.github.com"},
+]
+keywords = ["mcp", "douyin", "抖音", "wechat", "automation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Communications :: Chat",
 ]
 dependencies = [
     "mcp>=1.0.0",

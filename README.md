@@ -44,7 +44,7 @@
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/jp7454yv4f-sudo/Douyin-mcp.git
+git clone https://github.com/Lozzi1910/Douyin-mcp.git
 cd Douyin-mcp
 
 # 2. 安装依赖
@@ -220,6 +220,32 @@ pip install -e ".[dev]"
 # 代码检查
 ruff check douyin_mcp/
 ```
+
+## 💰 运营成本
+
+每次 MCP 调用完全免费（DOM 提取消息，零 API 费用），Docker 部署无额外成本。
+
+## 💳 定价 Pricing
+
+| 版本 | 价格 | 说明 |
+|------|------|------|
+| **个人版** | **免费** | AGPL v3 开源，个人/内部使用 |
+| **商业版** | **¥499/项目** | 闭源商用，含 1 年更新 |
+| **企业版** | **¥2999/年** | 无限项目、优先支持、定制开发 |
+
+**购买方式：**
+- 支付宝转账（备注 douyin-mcp）或联系微信
+- 商业授权咨询：Lozzi1910@users.noreply.github.com
+
+## ☕ 支持作者 Support
+
+如果这个项目对你有帮助，欢迎打赏支持开源！
+
+| 方式 | 链接 |
+|------|------|
+| 🌟 **GitHub Sponsors** | [github.com/sponsors/Lozzi1910](https://github.com/sponsors/Lozzi1910) |
+| ☕ **Buy Me a Coffee** | [buymeacoffee.com/Lozzi1910](https://buymeacoffee.com/Lozzi1910) |
+| 💰 **支付宝 / 微信支付** | 联系作者获取收款码 |
 
 ## 许可证
 

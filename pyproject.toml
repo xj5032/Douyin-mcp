@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "AGPL-3.0-only"}
 authors = [
-    {name = "Lozzi", email = "jp7454yv4f-sudo@users.noreply.github.com"},
+    {name = "Lozzi", email = "Lozzi1910@users.noreply.github.com"},
 ]
 keywords = ["mcp", "douyin", "抖音", "wechat", "automation"]
 classifiers = [
@@ -31,8 +31,8 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = "https://github.com/jp7454yv4f-sudo/Douyin-mcp"
-repository = "https://github.com/jp7454yv4f-sudo/Douyin-mcp"
+homepage = "https://github.com/Lozzi1910/Douyin-mcp"
+repository = "https://github.com/Lozzi1910/Douyin-mcp"
 
 [project.scripts]
 douyin-mcp = "douyin_mcp.server:main"

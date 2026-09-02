@@ -262,7 +262,7 @@ def main():
 
         sse = SseServerTransport("/mcp")
 
-        async def handle_sse(request):
+                async def handle_sse(request):
             if not token_ok(
                 request.headers.get("authorization", ""),
                 request.headers.get("x-api-key", ""),
@@ -270,14 +270,14 @@ def main():
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
 
             async with sse.connect_sse(
-    request.scope, request.receive, request._send
-) as streams:
-    mcp_server = mcp._mcp_server
-    await mcp_server.run(
-        streams[0],
-        streams[1],
-        mcp_server.create_initialization_options(),
-    )
+                request.scope, request.receive, request._send
+            ) as streams:
+                mcp_server = mcp._mcp_server
+                await mcp_server.run(
+                    streams[0],
+                    streams[1],
+                    mcp_server.create_initialization_options(),
+                )
 
         async def protected_mcp(scope, receive, send):
             headers = {

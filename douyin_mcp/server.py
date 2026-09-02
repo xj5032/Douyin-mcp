@@ -19,6 +19,7 @@ import asyncio
 import json
 import logging
 import os
+import secrets
 import sys
 from typing import Optional
 
@@ -238,26 +239,97 @@ def main():
         from starlette.applications import Starlette
         from starlette.routing import Mount, Route
 
+                from starlette.responses import JSONResponse, FileResponse
+
         async def health_endpoint(request):
-            from starlette.responses import JSONResponse
             return JSONResponse({
                 "status": "ok",
                 "service": "douyin-mcp",
                 "version": "0.1.0",
             })
 
+        def token_ok(authorization="", x_api_key=""):
+            expected = os.environ.get("DOUYIN_MCP_TOKEN", "").strip()
+            if not expected:
+                return False
+
+            supplied = ""
+            if authorization.lower().startswith("bearer "):
+                supplied = authorization[7:].strip()
+            elif x_api_key:
+                supplied = x_api_key.strip()
+
+            return bool(supplied) and secrets.compare_digest(supplied, expected)
+
         sse = SseServerTransport("/mcp")
 
         async def handle_sse(request):
+            if not token_ok(
+                request.headers.get("authorization", ""),
+                request.headers.get("x-api-key", ""),
+            ):
+                return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
             async with sse.connect_sse(
                 request.scope, request.receive, request._send
             ) as streams:
-                await mcp.run(streams[0], streams[1], mcp.create_initialization_options())
+                await mcp.run(
+                    streams[0],
+                    streams[1],
+                    mcp.create_initialization_options(),
+                )
+
+        async def protected_mcp(scope, receive, send):
+            headers = {
+                k.decode("latin-1").lower(): v.decode("latin-1")
+                for k, v in scope.get("headers", [])
+            }
+
+            if not token_ok(
+                headers.get("authorization", ""),
+                headers.get("x-api-key", ""),
+            ):
+                response = JSONResponse(
+                    {"error": "Unauthorized"},
+                    status_code=401,
+                )
+                await response(scope, receive, send)
+                return
+
+            await sse.handle_post_message(scope, receive, send)
+
+        async def login_qr_endpoint(request):
+            expected = os.environ.get("DOUYIN_MCP_TOKEN", "").strip()
+            supplied = request.query_params.get("token", "").strip()
+
+            if (
+                not expected
+                or not supplied
+                or not secrets.compare_digest(supplied, expected)
+            ):
+                return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+            qr_path = os.path.expanduser(
+                "~/.douyin_mcp/login_qrcode.png"
+            )
+
+            if not os.path.exists(qr_path):
+                return JSONResponse({
+                    "status": "not_ready",
+                    "message": "二维码还没生成，请先从 MCP 调用一次工具触发登录。",
+                }, status_code=404)
+
+            return FileResponse(
+                qr_path,
+                media_type="image/png",
+                headers={"Cache-Control": "no-store"},
+            )
 
         app = Starlette(
             routes=[
                 Route("/health", endpoint=health_endpoint),
-                Mount("/mcp", app=sse.handle_post_message),
+                Route("/login-qr", endpoint=login_qr_endpoint),
+                Mount("/mcp", app=protected_mcp),
                 Route("/sse", endpoint=handle_sse),
             ],
         )

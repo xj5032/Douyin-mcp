@@ -22,7 +22,7 @@ import os
 import sys
 from typing import Optional
 
-from mcp.server import FastMCP
+from mcp.server.fastmcp import FastMCP
 
 from douyin_mcp.core import DouyinController
 

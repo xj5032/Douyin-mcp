@@ -220,7 +220,7 @@ class BrowserManager:
                                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                                 "Chrome/120.0.0.0 Safari/537.36"
                             )
-                            kwargs["headless"] = True
+                            kwargs["headless"] = self._headless
                             kwargs["channel"] = "chromium"
                             kwargs["no_viewport"] = False
                         kwargs["user_agent"] = ua

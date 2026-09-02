@@ -35,7 +35,7 @@ COPY douyin_mcp/ ./douyin_mcp/
 RUN pip install --no-cache-dir -e . && \
     playwright install chromium
 # 环境变量
-ENV DOUYIN_HEADLESS=false
+ENV DOUYIN_HEADLESS=true
 ENV DOUYIN_TRANSPORT=sse
 ENV DOUYIN_PORT=6789
 ENV TZ=Asia/Shanghai
@@ -45,4 +45,4 @@ RUN mkdir -p /root/.douyin_mcp
 
 EXPOSE 6789
 
-CMD ["xvfb-run", "-a", "python", "-m", "douyin_mcp.server", "--transport", "sse", "--port", "6789"]
+CMD ["python", "-m", "douyin_mcp.server", "--transport", "sse", "--port", "6789"]

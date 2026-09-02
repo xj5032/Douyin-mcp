@@ -132,20 +132,16 @@ def search_user(keyword: str) -> str:
 
 
 @mcp.tool()
-def list_conversations() -> str:
+async def list_conversations() -> str:
     """列举当前账号的所有私信会话列表。
 
     返回每个会话的联系人昵称、最后一条消息的片段、未读消息数。
     """
     ctrl = _get_ctrl()
 
-    async def _run():
-        await ctrl.initialize()
-        result = await ctrl.list_conversations()
-        return result
-
     try:
-        return asyncio.run(_run())
+        await ctrl.initialize()
+        return await ctrl.list_conversations()
     except Exception as exc:
         logger.exception("list_conversations failed")
         return f"列举会话失败: {exc}"

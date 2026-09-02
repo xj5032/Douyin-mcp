@@ -238,8 +238,7 @@ def main():
         from mcp.server.sse import SseServerTransport
         from starlette.applications import Starlette
         from starlette.routing import Mount, Route
-
-                from starlette.responses import JSONResponse, FileResponse
+        from starlette.responses import JSONResponse, FileResponse
 
         async def health_endpoint(request):
             return JSONResponse({

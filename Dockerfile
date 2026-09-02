@@ -33,7 +33,7 @@ COPY pyproject.toml README.md ./
 COPY douyin_mcp/ ./douyin_mcp/
 
 RUN pip install --no-cache-dir -e . && \
-    playwright install chromium
+    playwright install --with-deps chromium
 # 环境变量
 ENV DOUYIN_HEADLESS=true
 ENV DOUYIN_TRANSPORT=sse

@@ -262,7 +262,7 @@ def main():
 
         sse = SseServerTransport("/mcp")
 
-                async def handle_sse(request):
+        async def handle_sse(request):
             if not token_ok(
                 request.headers.get("authorization", ""),
                 request.headers.get("x-api-key", ""),

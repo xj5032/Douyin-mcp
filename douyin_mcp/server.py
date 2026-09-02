@@ -260,7 +260,7 @@ def main():
 
             return bool(supplied) and secrets.compare_digest(supplied, expected)
 
-        sse = SseServerTransport("/mcp")
+        sse = SseServerTransport("/mcp/")
 
         async def handle_sse(request):
             if not token_ok(
